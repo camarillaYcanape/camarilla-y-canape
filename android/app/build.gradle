@@ -1,0 +1,25 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'org.camarillaycanape.app'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'org.camarillaycanape.app'
+        minSdk 23
+        targetSdk 34
+        versionCode Integer.parseInt((project.findProperty('appVersionCode') ?: '1').toString())
+        versionName '1.0'
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.8.0'
+    implementation 'androidx.core:core:1.12.0'
+}
