@@ -242,7 +242,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public String scheduledReminders() { return getPreferences(MODE_PRIVATE).getString("alarmsjson", "[]"); }
+        public String scheduledReminders() {
+            // Solo para las pruebas: la APK de release devuelve siempre una lista vacia.
+            if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) return "[]";
+            return getPreferences(MODE_PRIVATE).getString("alarmsjson", "[]");
+        }
 
         @JavascriptInterface
         public void cancelReminders() { cancelAll(); }
