@@ -57,9 +57,9 @@ jobs:
       - name: Prueba de la web en navegador (sin puente Android)
         run: |
           mkdir -p evidence
-          (cd /tmp && npm i playwright-core >/dev/null 2>&1)
+          mkdir -p /tmp/wt && cp android/web_test.mjs /tmp/wt/ && (cd /tmp/wt && npm i playwright-core >/dev/null 2>&1)
           (python3 -m http.server 8099 >/dev/null 2>&1 &) ; sleep 2
-          NODE_PATH=/tmp/node_modules node android/web_test.mjs 2>&1 | tee evidence/web-navegador.txt
+          (cd /tmp/wt && node web_test.mjs) 2>&1 | tee evidence/web-navegador.txt
         continue-on-error: true
       - name: Activar KVM
         run: |
