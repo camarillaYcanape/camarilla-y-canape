@@ -13,6 +13,8 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 log "Dispositivo: $(adb shell getprop ro.product.model) Android $(adb shell getprop ro.build.version.release) API $(adb shell getprop ro.build.version.sdk)"
 log "WebView: $(adb shell dumpsys webviewupdate | grep -m1 -i 'current webview package' )"
 adb shell settings put secure location_mode 3 || true
+adb logcat -c; adb logcat -v time > "$EV/logcat-completo.txt" 2>&1 &
+LOGPID=$!
 
 log "== Actualizacion: instalo la version previa (versionCode 1) y guardo un dato en la app"
 adb install -r "$DBGPREV" | tee -a "$EV/e2e-log.txt"
@@ -53,7 +55,23 @@ adb install --no-incremental -r "$RELPREV" | tee -a "$EV/e2e-log.txt"
 adb install --no-incremental -r "$REL" | tee -a "$EV/e2e-log.txt"
 log "versionCode release instalado: $(adb shell dumpsys package $PKG | grep -m1 versionCode)"
 adb shell am start -W -n $PKG/.MainActivity | tee -a "$EV/e2e-log.txt"; sleep 12
-log "pid release=$(adb shell pidof $PKG | tr -d '\r')"
+RP=$(adb shell pidof $PKG | tr -d '\r'); log "pid release=$RP"
+if [ -z "$RP" ]; then
+  log "PRIMER ARRANQUE DE LA RELEASE FALLO (sin proceso). Causa en logcat-completo.txt. Reintento una vez."
+  adb logcat -d | grep -E "FATAL|ANR in|has died|am_crash|am_proc_died|Force finishing|AndroidRuntime" | tail -20 | tee -a "$EV/e2e-log.txt"
+  adb shell am start -W -n $PKG/.MainActivity | tee -a "$EV/e2e-log.txt"; sleep 12
+  RP=$(adb shell pidof $PKG | tr -d '\r'); log "pid release tras reintento=$RP"
+fi
 adb logcat -d -s AndroidRuntime:E | tail -30 | tee -a "$EV/e2e-log.txt"
 adb exec-out screencap -p > "$EV/10-release-inicio.png"
 adb shell dumpsys window | grep -m1 mCurrentFocus | tee -a "$EV/e2e-log.txt"
+kill $LOGPID 2>/dev/null
+V=PASS; why=""
+chk(){ grep -qE "$1" "$EV/e2e-log.txt" || { V=FAIL; why="$why | falta: $2"; }; }
+chk 'marcador leido tras actualizar sobrevive' 'dato sobrevive a la actualizacion'
+chk 'compartir -> ventana.*ChooserActivity' 'selector de compartir'
+chk 'avisos: notificacion publicada.*Prueba de aviso' 'aviso recibido'
+chk 'agenda tarjetas 41' 'agenda'
+chk 'sin red: agenda tarjetas 41' 'agenda sin red'
+chk 'pid release(tras reintento)?=[0-9]+' 'release firmada abre'
+echo "$V $why" > "$EV/veredicto.txt"; log "VEREDICTO: $V $why"
