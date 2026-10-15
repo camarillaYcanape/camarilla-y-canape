@@ -103,6 +103,16 @@ await ev(`document.querySelector('#notif').click()`); await sleep(2000);
 log('avisos: boton tras quitar', await ev(`(document.querySelector('#notif')||{}).innerText`));
 log('avisos: programadas tras quitar', await ev(`AndroidApp.scheduledReminders()`));
 log('avisos: lineas del paquete en dumpsys alarm tras quitar', cnt());
+// Zona horaria Europe/Madrid: la hora programada debe ser la de la parada menos 15 min, incluido el dia del cambio de hora
+const fm = t => new Date(t).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour12: false, hour: '2-digit', minute: '2-digit' });
+const horasOk = list => list.length > 0 && list.every(p => { const q = p.t.match(/· (\d\d):(\d\d)$/); if (!q) return false; const mins = +q[1] * 60 + +q[2] - 15; return fm(p.at) === String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0'); });
+log('avisos: zona horaria del movil Europe/Madrid?', (await ev(`Intl.DateTimeFormat().resolvedOptions().timeZone`)));
+log('avisos: hora programada = parada menos 15 min en Europe/Madrid (dia normal)', horasOk(prog) ? 'SI' : 'NO', prog.length ? prog[0].t + ' -> ' + fm(prog[0].at) : '');
+await ev(`plan.date='2026-10-25';render()`); await sleep(1200);
+await ev(`document.querySelector('#notif').click()`); await sleep(2000);
+let dst = []; try { dst = JSON.parse(await ev(`AndroidApp.scheduledReminders()`)); } catch (e) {}
+log('avisos: hora programada = parada menos 15 min en Europe/Madrid (cambio de hora 25/10)', horasOk(dst) ? 'SI' : 'NO', dst.length ? dst[0].t + ' -> ' + fm(dst[0].at) + ' ' + new Date(dst[0].at).toISOString() : 'sin datos');
+await ev(`document.querySelector('#notif').click()`); await sleep(2000);
 // Cancelacion de verdad: una alarma temporal a +30 s, se cancela, y no debe llegar nada
 await ev(`AndroidApp.scheduleReminders(JSON.stringify([{id:'c',t:'Prueba CANCELADA',b:'no debe llegar',at:Date.now()+30000}]))`); await sleep(1500);
 log('avisos: alarma temporal programada, lineas', cnt());
