@@ -19,7 +19,24 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 - Agenda: copia manual (15/10/2026) de ArtBarcelona/GRAF (https://www.artbarcelona.es/es/agenda/, con inauguraciones, exposiciones, visitas y charlas con fecha y hora) y del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/). No se actualiza sola ni se consulta en directo. Se distingue inauguración de exposición; sin hora o fecha en la fuente, no se inventa.
 - Sin servidor propio: no hay avisos con la app cerrada (salvo vía calendario), ni sincronización, ni reservas.
 - OSRM es un servidor demo de uso moderado y sin garantías.
+- El mapa de fondo son teselas de OpenStreetMap (tile.openstreetmap.org, https://operations.osmfoundation.org/policies/tiles/): uso ligero, con atribución, sin garantías. Con "Cerca de mí" solo se piden tras aceptar la casilla.
 
 ## Archivos
 
 `index.html` contiene la app, los datos y la ilustración. `sw.js` solo gestiona la notificación. Sin compilación ni claves.
+
+## Propuesta pendiente: actualizar la agenda (no implementada)
+
+Estado: **solo propuesta**. No existe ningún botón de actualizar ni automatización, y no se ha obtenido permiso de las fuentes. La agenda sigue siendo una copia fechada.
+
+Lo acordado como punto de partida:
+
+- **Copia común.** Una única copia de la agenda que consulten todas las personas que usen la app, en vez de que cada navegador pregunte a la fuente.
+- **Una renovación al día como máximo**, compartida entre todos los usuarios. Un límite guardado solo en cada navegador no vale: cien personas podrían provocar cien consultas.
+- **Botón desactivado** durante ese intervalo, con la fecha de la última actualización y cuándo volverá a estar disponible.
+- **Si la actualización falla**, se conserva la última copia válida y se muestra su fecha.
+- Que pase un día **no garantiza que haya novedades**.
+- **Condiciones de reutilización sin aclarar.** No se han podido confirmar las de GRAF (graf.cat), que alimenta la agenda de ArtBarcelona. Es una incertidumbre pendiente, no una prohibición probada. Hasta aclararlo, la agenda se mantiene como copia fechada con atribución y enlace a la fuente.
+- Galeries d'Art de Catalunya aplica un captcha a las consultas automáticas: solo se puede refrescar a mano desde un navegador.
+
+Esta propuesta no añade cuentas, pagos, datos personales ni monitores recurrentes.
