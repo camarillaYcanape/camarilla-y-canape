@@ -74,5 +74,11 @@ jobs:
         run: |
           mkdir -p evidence
           cp out/camarillaYcanape.apk out/firma.txt out/apk-info.txt evidence/ 2>/dev/null || true
-          gh release delete android-latest --yes --cleanup-tag || true
-          gh release create android-latest evidence/* --title "camarillaYcanape para Android (build ${{ github.run_number }})" --notes "APK firmada y evidencias de prueba en emulador. Commit ${{ github.sha }}."
+          V=$(cut -d' ' -f1 evidence/veredicto.txt 2>/dev/null || echo FAIL)
+          if [ "$V" = "PASS" ]; then
+            gh release delete android-latest --yes --cleanup-tag || true
+            gh release create android-latest evidence/* --title "camarillaYcanape para Android (build ${{ github.run_number }})" --notes "APK firmada y evidencias de prueba en emulador (veredicto PASS). Commit ${{ github.sha }}."
+          else
+            gh release delete android-prueba-${{ github.run_number }} --yes --cleanup-tag || true
+            gh release create android-prueba-${{ github.run_number }} evidence/* --prerelease --title "PRUEBA NO VALIDADA build ${{ github.run_number }}" --notes "Las pruebas en emulador NO pasaron todas. No instalar como actualizacion. Ver veredicto.txt. La release estable android-latest no se ha tocado. Commit ${{ github.sha }}."
+          fi
