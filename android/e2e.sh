@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Prueba en un emulador Android real: actualizacion sobre version previa, funciones, modo sin red y humo de la APK firmada.
+# Version final probada: la release estable se publica solo con [publicar] en el titulo del commit.
 set -u
 PKG=org.camarillaycanape.app
 EV=${EVIDENCE:-evidence}; mkdir -p "$EV"
