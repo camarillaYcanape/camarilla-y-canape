@@ -5,6 +5,9 @@ on:
     paths: ['android/**', '.github/workflows/android.yml']
 permissions:
   contents: write
+concurrency:
+  group: android
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
