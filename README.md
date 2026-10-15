@@ -7,8 +7,8 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 - Monta una ruta de 2 a 5 galerías (más un café opcional) para el día y la hora que elijas.
 - Descarta lo que OpenStreetMap marca como cerrado a esa hora. Sin horario anotado, sale como "sin verificar".
 - Tiempos a pie reales con OSRM (con estimación si no hay conexión).
-- Salida desde un barrio o desde tu ubicación. La ubicación solo se usa en pantalla: no se guarda ni va en los enlaces.
-- Abre la ruta en Google Maps, descarga un .ics con aviso 15 min antes, o crea el evento en Google Calendar (tú lo confirmas).
+- Salida desde un barrio o desde tu ubicación. La ubicación no se guarda ni va en los enlaces. Para tiempos reales, y solo si lo aceptas con una casilla, las coordenadas de salida y de las paradas se envían al servidor demo de OSRM (que también ve tu IP). Sin aceptar, se usan tiempos estimados y no se envía nada.
+- Abre la ruta en Google Maps, descarga un .ics con alarma 15 min antes de cada parada (lo importas tú; que suene depende de tu calendario) o prepara un evento en Google Calendar (lo confirmas tú).
 - Avisos con la pestaña abierta (service worker `sw.js`), comprobación de visita por GPS, visitas manuales, cambiar parada, compartir ruta por enlace (solo zona, día, hora y paradas).
 - Pestaña Agenda con inauguraciones, exposiciones, visitas y .ics por evento.
 - Guion de conversación por galería, con frases propias.
