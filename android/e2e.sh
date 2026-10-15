@@ -91,7 +91,7 @@ chk 'cambio de hora 25/10\) SI' 'hora local Madrid, dia del cambio de hora'
 
 chk 'llego la cancelada\? \(0 = no\) 0' 'cancelacion efectiva'
 chk 'notificacion de parada real en segundo plano [1-9]' 'aviso de parada real en segundo plano'
-chk 'agenda tarjetas 41' 'agenda'
-chk 'sin red: agenda tarjetas 41' 'agenda sin red'
+chk '\] agenda tarjetas (3[0-9]|4[0-9])$' 'agenda (depende del dia: oculta lo ya terminado)'
+chk 'sin red: agenda tarjetas (3[0-9]|4[0-9])$' 'agenda sin red'
 chk 'pid release(tras reintento)?=[0-9]+' 'release firmada abre'
 echo "$V $why" > "$EV/veredicto.txt"; log "VEREDICTO: $V $why"
