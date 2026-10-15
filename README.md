@@ -10,12 +10,13 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 - Salida desde un barrio o desde tu ubicación. La ubicación solo se usa en pantalla: no se guarda ni va en los enlaces.
 - Abre la ruta en Google Maps, descarga un .ics con aviso 15 min antes, o crea el evento en Google Calendar (tú lo confirmas).
 - Avisos con la pestaña abierta (service worker `sw.js`), comprobación de visita por GPS, visitas manuales, cambiar parada, compartir ruta por enlace (solo zona, día, hora y paradas).
+- Pestaña Agenda con inauguraciones, exposiciones, visitas y .ics por evento.
 - Guion de conversación por galería, con frases propias.
 
 ## Límites
 
 - Datos de OpenStreetMap (copia del 15/10/2026, ODbL): pueden estar incompletos o desfasados. Confirma el horario antes de ir.
-- Exposiciones: copia manual (15/10/2026) del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/), solo galerías socias de Barcelona ciudad. No se actualiza sola. La fuente bloquea clientes automáticos, así que no hay consulta en directo.
+- Agenda: copia manual (15/10/2026) de ArtBarcelona/GRAF (https://www.artbarcelona.es/es/agenda/, con inauguraciones, exposiciones, visitas y charlas con fecha y hora) y del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/). No se actualiza sola ni se consulta en directo. Se distingue inauguración de exposición; sin hora o fecha en la fuente, no se inventa.
 - Sin servidor propio: no hay avisos con la app cerrada (salvo vía calendario), ni sincronización, ni reservas.
 - OSRM es un servidor demo de uso moderado y sin garantías.
 
