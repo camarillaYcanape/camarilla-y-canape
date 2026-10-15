@@ -48,8 +48,11 @@ execSync('adb shell input keyevent KEYCODE_BACK'); await sleep(1500);
 // Cerca de mi con ubicacion
 await ev(`location.hash='#/'`); await sleep(800);
 await ev(`document.querySelector('[data-choice=Barrio][data-value=Cerca]')&&document.querySelector('[data-choice=Barrio][data-value=Cerca]').click()`); await sleep(800);
-await ev(`document.querySelector('#geo')&&document.querySelector('#geo').click()`); await sleep(4000);
-log('cerca de mi', await ev(`(document.querySelector('.summary')||{}).innerText`));
+execSync('adb emu geo fix 2.1649 41.3917');
+await ev(`document.querySelector('#geo')&&document.querySelector('#geo').click()`);
+let st = '';
+for (let i = 0; i < 12; i++) { await sleep(2500); st = await ev(`(document.querySelector('.summary')||{}).innerText||''`); if (/Tu ubicación actual/.test(st) && !/Buscando/.test(st)) break; }
+log('cerca de mi: ubicacion', /Tu ubicación actual/.test(st) ? 'OBTENIDA' : 'NO obtenida', '|', st.split('\n').slice(0, 2).join(' / '), '|', await ev(`[...document.querySelectorAll('[role=status],.warn,.toast')].map(e=>e.innerText).join(' ; ')`));
 shot('04-cerca-de-mi');
 // Agenda
 await ev(`location.hash='#/expos'`); await sleep(1500);
