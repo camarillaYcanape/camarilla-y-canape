@@ -81,7 +81,7 @@ V=PASS; why=""
 chk(){ grep -qE "$1" "$EV/e2e-log.txt" || { V=FAIL; why="$why | falta: $2"; }; }
 chk 'marcador leido tras actualizar sobrevive' 'dato sobrevive a la actualizacion'
 chk 'compartir -> ventana.*ChooserActivity' 'selector de compartir'
-chk 'coincide titulo y hora de cada parada: SI' 'paradas programadas coinciden con el plan'
+chk 'coincide titulo y hora de cada parada SI' 'paradas programadas coinciden con el plan'
 chk 'llego la cancelada\? \(0 = no\) 0' 'cancelacion efectiva'
 chk 'notificacion de parada real en segundo plano [1-9]' 'aviso de parada real en segundo plano'
 chk 'agenda tarjetas 41' 'agenda'
