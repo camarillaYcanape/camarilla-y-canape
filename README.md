@@ -1,23 +1,24 @@
 # camarillaYcanape
 
-Prototipo de paseo cultural con ironía cómplice. Pepinillo, oliva y crema.
+Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con ironía cómplice. Pepinillo, oliva y crema.
 
-## Uso
+## Qué hace
 
-Abre `index.html` con un servidor web estático. No requiere instalación de paquetes, compilación, cuenta de usuario, claves API ni servicios de pago.
-
-Elige barrio de ejemplo, tipo de ruta, salida, 2–5 galerías y café opcional. El horario se recalcula con tiempos de demostración. En Mi ruta puedes abrir los guiones y marcar visitas manualmente. La guía está dentro de la app.
-
-El plan se guarda mediante localStorage solo en este navegador. No hay backend, sincronización ni datos compartidos. Si el almacenamiento falla, aparece una advertencia. La guía permite restablecer el plan.
+- Monta una ruta de 2 a 5 galerías (más un café opcional) para el día y la hora que elijas.
+- Descarta lo que OpenStreetMap marca como cerrado a esa hora. Sin horario anotado, sale como "sin verificar".
+- Tiempos a pie reales con OSRM (con estimación si no hay conexión).
+- Salida desde un barrio o desde tu ubicación. La ubicación solo se usa en pantalla: no se guarda ni va en los enlaces.
+- Abre la ruta en Google Maps, descarga un .ics con aviso 15 min antes, o crea el evento en Google Calendar (tú lo confirmas).
+- Avisos con la pestaña abierta (service worker `sw.js`), comprobación de visita por GPS, visitas manuales, cambiar parada, compartir ruta por enlace (solo zona, día, hora y paradas).
+- Guion de conversación por galería, con frases propias.
 
 ## Límites
 
-Todos los lugares, horarios y trayectos son ficticios. El esquema no representa calles ni coordenadas. No es una agenda de hoy ni sirve para orientarse por Barcelona. No hay GPS, alertas en segundo plano, reservas ni garantía de vino o de luz. Los guiones contienen frases propias, no citas atribuidas.
+- Datos de OpenStreetMap (copia del 15/10/2026, ODbL): pueden estar incompletos o desfasados. Confirma el horario antes de ir.
+- No hay fuente gratuita fiable de exposiciones: cada galería enlaza su web.
+- Sin servidor propio: no hay avisos con la app cerrada (salvo vía calendario), ni sincronización, ni reservas.
+- OSRM es un servidor demo de uso moderado y sin garantías.
 
-En Android Chrome se puede guardar como marcador o crear un acceso directo si el navegador lo ofrece. No se garantiza uso sin conexión.
+## Archivos
 
-## Archivo de la app
-
-`index.html` contiene la estructura accesible, el diseño adaptable, los controles, el cálculo del ejemplo, el guardado local y la ilustración conceptual incrustada. La ilustración no es una fotografía de una galería real.
-
-GitHub Pages sirve la rama main desde la raíz. No hay dependencias externas ni solicitudes a servicios de mapas.
+`index.html` contiene la app, los datos y la ilustración. `sw.js` solo gestiona la notificación. Sin compilación ni claves.
