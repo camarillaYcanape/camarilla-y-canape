@@ -17,18 +17,20 @@ adb shell settings put secure location_mode 3 || true
 log "== Actualizacion: instalo la version previa (versionCode 1) y guardo un dato en la app"
 adb install -r "$DBGPREV" | tee -a "$EV/e2e-log.txt"
 log "versionCode instalado: $(adb shell dumpsys package $PKG | grep -m1 versionCode)"
-start_app; node_e2e set "$(date +%s)"
+start_app; node_e2e set "$(date +%s)"; sleep 8
 log "== Actualizacion: instalo encima la version nueva con adb install -r (mismo paquete)"
 adb install -r "$DBG" | tee -a "$EV/e2e-log.txt"
 log "versionCode instalado: $(adb shell dumpsys package $PKG | grep -m1 versionCode)"
 start_app; node_e2e get
 
-log "== Funciones"
+log "== Funciones (permisos de ubicacion concedidos antes de abrir: conceder con la app abierta la cierra)"
 adb shell pm grant $PKG android.permission.ACCESS_FINE_LOCATION
 adb shell pm grant $PKG android.permission.ACCESS_COARSE_LOCATION
 adb emu geo fix 2.1649 41.3917 || true
+start_app
 adb exec-out screencap -p > "$EV/01-inicio.png"
 node_e2e main
+adb logcat -d -s AndroidRuntime:E | tail -15 | tee -a "$EV/e2e-log.txt"
 adb shell run-as $PKG ls -la cache/ics 2>&1 | tee -a "$EV/e2e-log.txt"
 adb exec-out screencap -p > "$EV/09-final-debug.png"
 
