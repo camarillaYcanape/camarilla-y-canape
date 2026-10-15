@@ -85,17 +85,45 @@ await ev(`location.hash='#/ruta'`); await sleep(3000);
 await ev(`plan.date=new Date(Date.now()+864e5).toISOString().slice(0,10);render()`); await sleep(1000);
 log('avisos: boton fase 2', await ev(`(document.querySelector('#notif')||{}).innerText`));
 log('avisos: permiso tras conceder', await ev(`AndroidApp.reminderPermission()`));
+const cnt = () => parseInt(sh(`adb shell dumpsys alarm | grep -c 'org.camarillaycanape.app'; true`)) || 0;
+const N0 = cnt();
 await ev(`document.querySelector('#notif').click()`); await sleep(2000);
 log('avisos: 2.o toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
 log('avisos: boton ahora', await ev(`(document.querySelector('#notif')||{}).innerText`));
-log('avisos: alarmas de Android programadas', sh(`adb shell dumpsys alarm | grep -c 'org.camarillaycanape.app'`));
-await ev(`document.querySelector('#notif').click()`); await sleep(1500);
-log('avisos: tras quitar, alarmas', sh(`adb shell dumpsys alarm | grep -c 'reminder://'`));
-// El aviso llega de verdad: alarma a +6 s por el mismo puente
-await ev(`AndroidApp.scheduleReminders(JSON.stringify([{id:'t',t:'Prueba de aviso',b:'En 15 minutos. Calle de prueba',at:Date.now()+6000}]))`); await sleep(20000);
-log('avisos: notificacion publicada', sh(`adb shell dumpsys notification --noredact | grep -m3 -E 'Prueba de aviso|En 15 minutos'`));
-execSync('adb shell cmd statusbar expand-notifications'); await sleep(2000); shot('07-aviso-recibido');
-execSync('adb shell cmd statusbar collapse'); await sleep(800);
+const N1 = cnt();
+log('avisos: lineas del paquete en dumpsys alarm antes -> despues de programar', N0 + ' -> ' + N1);
+let prog = [];
+try { prog = JSON.parse(await ev(`AndroidApp.scheduledReminders()`)); } catch (e) { log('avisos: no se pudo leer lo programado', String(e).slice(0, 80)); }
+const exp = JSON.parse(await ev(`JSON.stringify(stopsView().list.map(x=>({t:x.p.n+' · '+clock(x.at),at:new Date(plan.date+'T00:00:00').getTime()+(x.at-15)*60000})))`));
+log('avisos: paradas del plan / programadas en Android', exp.length + ' / ' + prog.length);
+log('avisos: coincide titulo y hora de cada parada', prog.length > 0 && JSON.stringify(exp.map(e => [e.t, e.at])) === JSON.stringify(prog.map(p => [p.t, p.at])) ? 'SI' : 'NO');
+if (prog.length) log('avisos: primera parada programada', JSON.stringify(prog[0]), 'hora UTC', new Date(prog[0].at).toISOString());
+// Cancelar con el boton de la app
+await ev(`document.querySelector('#notif').click()`); await sleep(2000);
+log('avisos: boton tras quitar', await ev(`(document.querySelector('#notif')||{}).innerText`));
+log('avisos: programadas tras quitar', await ev(`AndroidApp.scheduledReminders()`));
+log('avisos: lineas del paquete en dumpsys alarm tras quitar', cnt());
+// Cancelacion de verdad: una alarma temporal a +30 s, se cancela, y no debe llegar nada
+await ev(`AndroidApp.scheduleReminders(JSON.stringify([{id:'c',t:'Prueba CANCELADA',b:'no debe llegar',at:Date.now()+30000}]))`); await sleep(1500);
+log('avisos: alarma temporal programada, lineas', cnt());
+await ev(`AndroidApp.cancelReminders()`); await sleep(1500);
+log('avisos: alarma temporal tras cancelar, lineas', cnt());
+await sleep(45000);
+log('avisos: llego la cancelada? (0 = no)', sh(`adb shell dumpsys notification --noredact | grep -c 'Prueba CANCELADA'; true`));
+// Llegada con la app en segundo plano, con el contenido de una parada real (adelantada a +10 s)
+if (prog.length) {
+  const p0 = prog[0];
+  await ev(`AndroidApp.scheduleReminders(JSON.stringify([{id:${JSON.stringify(p0.id)},t:${JSON.stringify(p0.t)},b:${JSON.stringify(p0.b)},at:Date.now()+10000}]))`);
+  sh('adb shell input keyevent KEYCODE_HOME'); await sleep(30000);
+  log('avisos: app en segundo plano, foco', sh('adb shell dumpsys window | grep -m1 mCurrentFocus'));
+  log('avisos: proceso de la app vivo', sh('adb shell pidof org.camarillaycanape.app') || 'no');
+  const nm = p0.t.split(' · ')[0];
+  log('avisos: notificacion de parada real en segundo plano', sh(`adb shell dumpsys notification --noredact | grep -c -F ${JSON.stringify(nm)}; true`));
+  log('avisos: notificacion publicada', sh(`adb shell dumpsys notification --noredact | grep -m2 -F ${JSON.stringify(nm)}`));
+  execSync('adb shell cmd statusbar expand-notifications'); await sleep(2000); shot('07-aviso-recibido');
+  execSync('adb shell cmd statusbar collapse'); await sleep(800);
+  sh('adb shell am start -n org.camarillaycanape.app/.MainActivity'); await sleep(3000);
+}
 // .ics
 await ev(`document.querySelector('#ics')&&document.querySelector('#ics').click()`); await sleep(4000);
 shot('03-ics-selector');
