@@ -16,8 +16,15 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 log "Dispositivo: $(adb shell getprop ro.product.model) Android $(adb shell getprop ro.build.version.release) API $(adb shell getprop ro.build.version.sdk)"
 log "WebView: $(adb shell dumpsys webviewupdate | grep -m1 -i 'current webview package' )"
 adb shell settings put secure location_mode 3 || true
-adb shell cmd alarm set-timezone Europe/Madrid 2>&1 | tee -a "$EV/e2e-log.txt" || true
-sleep 2
+for i in 1 2 3 4 5 6; do
+  adb shell cmd alarm set-timezone Europe/Madrid 2>&1 | tee -a "$EV/e2e-log.txt" || true
+  sleep 3
+  [ "$(adb shell getprop persist.sys.timezone | tr -d '\r')" = "Europe/Madrid" ] && break
+  log "zona horaria aun no aplicada (intento $i)"
+done
+if [ "$(adb shell getprop persist.sys.timezone | tr -d '\r')" != "Europe/Madrid" ]; then
+  adb root >/dev/null 2>&1; sleep 3; adb shell setprop persist.sys.timezone Europe/Madrid; sleep 2
+fi
 log "Zona horaria del emulador: $(adb shell getprop persist.sys.timezone) | $(adb shell date)"
 adb logcat -c; adb logcat -v time > "$EV/logcat-completo.txt" 2>&1 &
 LOGPID=$!
