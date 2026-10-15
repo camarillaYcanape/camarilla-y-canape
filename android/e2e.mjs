@@ -43,6 +43,7 @@ if (MODE === 'offline') {
   shot('12-sin-red-ruta');
   process.exit(0);
 }
+if (MODE === 'main') {
 log('origen', await ev('location.origin'));
 log('UA', await ev('navigator.userAgent'));
 log('funciones', await ev(`JSON.stringify({Notification:'Notification' in window, share:!!navigator.share, clipboard:!!navigator.clipboard, sw:'serviceWorker' in navigator, geo:!!navigator.geolocation})`));
@@ -58,7 +59,7 @@ shot('02-ruta-mapa');
 await ev(`document.querySelector('#share')&&document.querySelector('#share').click()`); await sleep(2500);
 log('compartir -> aviso', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
 log('compartir -> ventana', sh(`adb shell dumpsys window | grep -m1 mCurrentFocus`));
-log('compartir -> texto enviado', sh(`adb shell dumpsys activity activities | grep -o -m2 'extra.TEXT[^ ]\\{0,200\\}'`));
+log('compartir -> texto enviado', sh(`adb shell dumpsys activity activities | grep -o -m3 'camarillaycanape.github.io[^ ,]*' || echo no-visible-en-dumpsys`));
 shot('06-compartir');
 execSync('adb shell input keyevent KEYCODE_BACK'); await sleep(1500);
 log('tras cerrar compartir, foco', sh(`adb shell dumpsys window | grep -m1 mCurrentFocus`));
@@ -75,6 +76,14 @@ const mm = ui.match(/resource-id="com\.android\.permissioncontroller:id\/permiss
 log('avisos: boton Permitir del dialogo', mm ? 'encontrado' : 'NO encontrado');
 if (mm) sh(`adb shell input tap ${Math.round((+mm[1] + +mm[3]) / 2)} ${Math.round((+mm[2] + +mm[4]) / 2)}`);
 await sleep(2000);
+log('tras Permitir: foco', sh('adb shell dumpsys window | grep -m1 mCurrentFocus'));
+log('tras Permitir: proceso', sh('adb shell pidof org.camarillaycanape.app') || 'SIN PROCESO');
+process.exit(0);
+}
+// Fase 2: tras el dialogo (la app puede haberse reiniciado).
+await ev(`location.hash='#/ruta'`); await sleep(3000);
+await ev(`plan.date=new Date(Date.now()+864e5).toISOString().slice(0,10);render()`); await sleep(1000);
+log('avisos: boton fase 2', await ev(`(document.querySelector('#notif')||{}).innerText`));
 log('avisos: permiso tras conceder', await ev(`AndroidApp.reminderPermission()`));
 await ev(`document.querySelector('#notif').click()`); await sleep(2000);
 log('avisos: 2.o toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
