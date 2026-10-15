@@ -154,8 +154,8 @@ async function notify(v){if(notifTimers.length){notifTimers.forEach(clearTimeout
  if(APP){const st=AndroidApp.reminderPermission();
   if(st==='ask'){AndroidApp.askReminderPermission();toast('Acepta el permiso de avisos y vuelve a pulsar el botón.');return;}
   if(st!=='granted'){toast('Permiso de avisos denegado. Actívalo en Ajustes del móvil o usa el calendario.');return;}
-  const t0=Date.now(),b0=new Date(plan.date+'T00:00:00').getTime(),it=[];
-  for(const x of v.list){const at=b0+(x.at-15)*60000;if(at>t0)it.push({id:x.p.id,t:x.p.n+' · '+clock(x.at),b:'En 15 minutos. '+(x.p.s||''),at});}
+  const t0=Date.now(),[Y0,M0,D0]=plan.date.split('-').map(Number),it=[];
+  for(const x of v.list){const at=new Date(Y0,M0-1,D0,0,x.at-15,0).getTime();if(at>t0)it.push({id:x.p.id,t:x.p.n+' · '+clock(x.at),b:'En 15 minutos. '+(x.p.s||''),at});}
   if(!it.length){toast('Todas las paradas ya han pasado o están a menos de 15 min.');return;}
   AndroidApp.scheduleReminders(JSON.stringify(it));notifTimers=it.map(()=>0);toast(it.length+' avisos programados en el móvil. Pueden retrasarse si el sistema ahorra batería; el calendario es más fiable.');render();return;}
  if(!('Notification' in window)){toast('Este navegador no admite avisos. Usa el calendario.');return;}
