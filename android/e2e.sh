@@ -12,6 +12,7 @@ log "WebView: $(adb shell dumpsys webviewupdate | grep -m1 -i 'current webview p
 adb install -r "$DBG" | tee -a "$EV/e2e-log.txt"
 adb shell pm grant $PKG android.permission.ACCESS_FINE_LOCATION
 adb shell pm grant $PKG android.permission.ACCESS_COARSE_LOCATION
+adb shell settings put secure location_mode 3 || true
 adb emu geo fix 2.1649 41.3917 || true
 adb shell am start -n $PKG/.MainActivity; sleep 10
 PID=$(adb shell pidof $PKG | tr -d '\r'); log "pid=$PID"
@@ -24,8 +25,10 @@ adb exec-out screencap -p > "$EV/09-final-debug.png"
 adb shell input keyevent KEYCODE_BACK; sleep 1
 adb uninstall $PKG >/dev/null
 log "Humo de la APK firmada (release)"
-adb install -r "$REL" | tee -a "$EV/e2e-log.txt"
-adb shell am start -n $PKG/.MainActivity; sleep 10
+adb logcat -c
+adb install --no-incremental -r "$REL" | tee -a "$EV/e2e-log.txt"
+adb shell am start -W -n $PKG/.MainActivity | tee -a "$EV/e2e-log.txt"; sleep 12
 log "pid release=$(adb shell pidof $PKG | tr -d '\r')"
+adb logcat -d -s AndroidRuntime:E chromium:E | tail -30 | tee -a "$EV/e2e-log.txt"
 adb exec-out screencap -p > "$EV/10-release-inicio.png"
 adb shell dumpsys window | grep -m1 mCurrentFocus | tee -a "$EV/e2e-log.txt"
