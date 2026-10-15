@@ -2,6 +2,8 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 const EV = process.env.EVIDENCE || 'evidence';
+const MODE = process.env.MODE || 'main';
+const sh = c => { try { return execSync(c, { encoding: 'utf8' }).trim(); } catch (e) { return 'ERR ' + e.message.slice(0, 120); } };
 const log = (...a) => console.log('[e2e]', ...a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const shot = n => fs.writeFileSync(`${EV}/${n}.png`, execSync('adb exec-out screencap -p', { maxBuffer: 1 << 26 }));
@@ -23,6 +25,23 @@ ws.onmessage = m => {
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pend[i] = r; ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async e => { const r = await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true }); return r.result.result?.value ?? JSON.stringify(r.result); };
 await send('Runtime.enable'); await send('Network.enable');
+
+if (MODE === 'set') { await ev(`localStorage.setItem('cyc_test_marker','sobrevive-'+${JSON.stringify(process.env.MARK || 'x')})`); log('marcador escrito', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
+if (MODE === 'get') { log('marcador leido tras actualizar', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
+if (MODE === 'offline') {
+  log('sin red: navigator.onLine', await ev('navigator.onLine'));
+  log('sin red: origen', await ev('location.origin'));
+  log('sin red: logo', await ev(`!!document.querySelector('.logo') && document.querySelector('.logo').naturalWidth`));
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  log('sin red: agenda tarjetas', await ev(`document.querySelectorAll('article').length`));
+  shot('11-sin-red-agenda');
+  await ev(`location.hash='#/ruta'`); await sleep(2000);
+  log('sin red: ruta pantalla', (await ev(`document.body.innerText.slice(0,300).replace(/\\n+/g,' | ')`)));
+  await ev(`document.querySelector('#gen')&&document.querySelector('#gen').click()`); await sleep(9000);
+  log('sin red: tras generar ruta', (await ev(`[...document.querySelectorAll('[role=status],.warn,.toast,.summary')].map(e=>e.innerText.replace(/\\n+/g,' ')).join(' ; ').slice(0,400)`)));
+  shot('12-sin-red-ruta');
+  process.exit(0);
+}
 log('origen', await ev('location.origin'));
 log('UA', await ev('navigator.userAgent'));
 log('funciones', await ev(`JSON.stringify({Notification:'Notification' in window, share:!!navigator.share, clipboard:!!navigator.clipboard, sw:'serviceWorker' in navigator, geo:!!navigator.geolocation})`));
@@ -35,15 +54,37 @@ log('red tiles/osrm', JSON.stringify([...new Set(net)].slice(0, 12)));
 log('imagenes de mapa en SVG', await ev(`document.querySelectorAll('.map-panel image').length`));
 shot('02-ruta-mapa');
 // Compartir enlace
-await ev(`document.querySelector('#share')&&document.querySelector('#share').click()`); await sleep(1500);
+await ev(`document.querySelector('#share')&&document.querySelector('#share').click()`); await sleep(2500);
 log('compartir -> aviso', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
-// Avisos
-await ev(`document.querySelector('#notif')&&document.querySelector('#notif').click()`); await sleep(1500);
-log('avisos -> aviso', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
+log('compartir -> ventana', sh(`adb shell dumpsys window | grep -m1 mCurrentFocus`));
+log('compartir -> texto enviado', sh(`adb shell dumpsys activity activities | grep -o -m2 'extra.TEXT[^ ]\\{0,200\\}'`));
+shot('06-compartir');
+execSync('adb shell input keyevent KEYCODE_BACK'); await sleep(1500);
+log('tras cerrar compartir, foco', sh(`adb shell dumpsys window | grep -m1 mCurrentFocus`));
+// Avisos nativos
+await ev(`plan.date=new Date(Date.now()+864e5).toISOString().slice(0,10);render()`); await sleep(800);
+log('avisos: boton', await ev(`(document.querySelector('#notif')||{}).innerText`));
+log('avisos: permiso inicial', await ev(`AndroidApp.reminderPermission()`));
+await ev(`document.querySelector('#notif').click()`); await sleep(2500);
+log('avisos: 1.er toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
+shot('06b-permiso-avisos');
+sh('adb shell pm grant org.camarillaycanape.app android.permission.POST_NOTIFICATIONS'); await sleep(1500);
+log('avisos: permiso tras conceder', await ev(`AndroidApp.reminderPermission()`));
+await ev(`document.querySelector('#notif').click()`); await sleep(2000);
+log('avisos: 2.o toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
+log('avisos: boton ahora', await ev(`(document.querySelector('#notif')||{}).innerText`));
+log('avisos: alarmas de Android programadas', sh(`adb shell dumpsys alarm | grep -c 'org.camarillaycanape.app'`));
+await ev(`document.querySelector('#notif').click()`); await sleep(1500);
+log('avisos: tras quitar, alarmas', sh(`adb shell dumpsys alarm | grep -c 'reminder://'`));
+// El aviso llega de verdad: alarma a +6 s por el mismo puente
+await ev(`AndroidApp.scheduleReminders(JSON.stringify([{id:'t',t:'Prueba de aviso',b:'En 15 minutos. Calle de prueba',at:Date.now()+6000}]))`); await sleep(20000);
+log('avisos: notificacion publicada', sh(`adb shell dumpsys notification --noredact | grep -m3 -E 'Prueba de aviso|En 15 minutos'`));
+execSync('adb shell cmd statusbar expand-notifications'); await sleep(2000); shot('07-aviso-recibido');
+execSync('adb shell cmd statusbar collapse'); await sleep(800);
 // .ics
 await ev(`document.querySelector('#ics')&&document.querySelector('#ics').click()`); await sleep(4000);
 shot('03-ics-selector');
-log('ics tras pulsar', 'ver listado de cache/ics y captura 03');
+log('ics: ventana', sh(`adb shell dumpsys window | grep -m1 mCurrentFocus`));
 execSync('adb shell input keyevent KEYCODE_BACK'); await sleep(1500);
 // Cerca de mi con ubicacion
 await ev(`location.hash='#/'`); await sleep(800);
