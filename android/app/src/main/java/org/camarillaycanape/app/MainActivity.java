@@ -159,7 +159,7 @@ public class MainActivity extends Activity {
             if (x.isEmpty()) continue;
             am.cancel(pending(Integer.parseInt(x), "", ""));
         }
-        p.edit().remove("alarms").apply();
+        p.edit().remove("alarms").remove("alarmsjson").apply();
     }
 
     /** Puente mínimo: solo guardar y abrir el .ics que genera la propia app. */
@@ -235,11 +235,14 @@ public class MainActivity extends Activity {
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, o.getLong("at"), pending(code, o.getString("t"), o.getString("b")));
                     ids.append(code).append(',');
                 }
-                ed.putString("alarms", ids.toString()).apply();
+                ed.putString("alarms", ids.toString()).putString("alarmsjson", json).apply();
             } catch (Exception e) {
                 Toast.makeText(MainActivity.this, "No se pudieron programar los avisos.", Toast.LENGTH_LONG).show();
             }
         }
+
+        @JavascriptInterface
+        public String scheduledReminders() { return getPreferences(MODE_PRIVATE).getString("alarmsjson", "[]"); }
 
         @JavascriptInterface
         public void cancelReminders() { cancelAll(); }
