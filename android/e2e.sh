@@ -30,6 +30,10 @@ adb emu geo fix 2.1649 41.3917 || true
 start_app
 adb exec-out screencap -p > "$EV/01-inicio.png"
 node_e2e main
+sleep 3
+PID=$(adb shell pidof $PKG | tr -d '\r'); if [ -z "$PID" ]; then log "la app se cerro tras conceder el permiso: la reabro"; adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9; PID=$(adb shell pidof $PKG | tr -d '\r'); fi
+adb forward tcp:9222 localabstract:webview_devtools_remote_$PID
+node_e2e rest
 adb logcat -d -s AndroidRuntime:E | tail -15 | tee -a "$EV/e2e-log.txt"
 adb shell run-as $PKG ls -la cache/ics 2>&1 | tee -a "$EV/e2e-log.txt"
 adb exec-out screencap -p > "$EV/09-final-debug.png"
