@@ -26,6 +26,13 @@ jobs:
           mkdir -p android/app/src/main/assets
           cp index.html sw.js android/app/src/main/assets/
           python3 android/make_icons.py
+      - name: Compilar version previa (versionCode 1) para probar la actualizacion
+        run: |
+          cd android
+          gradle --no-daemon assembleDebug assembleRelease -PappVersionCode=1
+          mkdir -p ../prev
+          cp app/build/outputs/apk/debug/app-debug.apk ../prev/app-debug-prev.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk ../prev/release-prev-unsigned.apk
       - name: Compilar
         run: |
           cd android
@@ -40,6 +47,9 @@ jobs:
           mkdir -p out
           "$BT/zipalign" -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/al.apk"
           "$BT/apksigner" sign --ks "$RUNNER_TEMP/cyc.jks" --ks-pass env:KS_PASS --out out/camarillaYcanape.apk "$RUNNER_TEMP/al.apk"
+          "$BT/zipalign" -f 4 prev/release-prev-unsigned.apk "$RUNNER_TEMP/alp.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/cyc.jks" --ks-pass env:KS_PASS --out out/release-prev.apk "$RUNNER_TEMP/alp.apk"
+          cp prev/app-debug-prev.apk out/
           "$BT/apksigner" verify --print-certs out/camarillaYcanape.apk | head -3 | tee out/firma.txt
           "$BT/aapt2" dump badging out/camarillaYcanape.apk | grep -E "package:|sdkVersion|uses-permission|application-label:" | tee out/apk-info.txt
           cp android/app/build/outputs/apk/debug/app-debug.apk out/app-debug.apk
@@ -56,7 +66,7 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          script: bash android/e2e.sh out/app-debug.apk out/camarillaYcanape.apk
+          script: bash android/e2e.sh out/app-debug.apk out/camarillaYcanape.apk out/app-debug-prev.apk out/release-prev.apk
         continue-on-error: true
       - name: Publicar APK y evidencias
         env:
