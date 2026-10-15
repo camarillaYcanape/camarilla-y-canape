@@ -12,6 +12,7 @@ const tab = tabs.find(t => t.type === 'page');
 log('pagina', tab.url);
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise(r => (ws.onopen = r));
+ws.onclose = () => log('CONEXION DE DEPURACION CERRADA (la app se cerro o recargo)');
 let id = 0; const pend = {}; const net = [];
 ws.onmessage = m => {
   const d = JSON.parse(m.data);
@@ -68,7 +69,12 @@ log('avisos: permiso inicial', await ev(`AndroidApp.reminderPermission()`));
 await ev(`document.querySelector('#notif').click()`); await sleep(2500);
 log('avisos: 1.er toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
 shot('06b-permiso-avisos');
-sh('adb shell pm grant org.camarillaycanape.app android.permission.POST_NOTIFICATIONS'); await sleep(1500);
+// Se pulsa "Permitir" en el dialogo real del sistema (conceder por adb cerraria la app).
+const ui = sh('adb shell uiautomator dump /sdcard/u.xml >/dev/null; adb shell cat /sdcard/u.xml');
+const mm = ui.match(/resource-id="com\.android\.permissioncontroller:id\/permission_allow_button"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/);
+log('avisos: boton Permitir del dialogo', mm ? 'encontrado' : 'NO encontrado');
+if (mm) sh(`adb shell input tap ${Math.round((+mm[1] + +mm[3]) / 2)} ${Math.round((+mm[2] + +mm[4]) / 2)}`);
+await sleep(2000);
 log('avisos: permiso tras conceder', await ev(`AndroidApp.reminderPermission()`));
 await ev(`document.querySelector('#notif').click()`); await sleep(2000);
 log('avisos: 2.o toque', await ev(`(document.querySelector('.toast,[role=status]')||{}).innerText`));
