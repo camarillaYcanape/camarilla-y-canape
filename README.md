@@ -15,7 +15,7 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 ## Límites
 
 - Datos de OpenStreetMap (copia del 15/10/2026, ODbL): pueden estar incompletos o desfasados. Confirma el horario antes de ir.
-- No hay fuente gratuita fiable de exposiciones: cada galería enlaza su web.
+- Exposiciones: copia manual (15/10/2026) del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/), solo galerías socias de Barcelona ciudad. No se actualiza sola. La fuente bloquea clientes automáticos, así que no hay consulta en directo.
 - Sin servidor propio: no hay avisos con la app cerrada (salvo vía calendario), ni sincronización, ni reservas.
 - OSRM es un servidor demo de uso moderado y sin garantías.
 
