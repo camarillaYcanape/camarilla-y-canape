@@ -16,6 +16,9 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 log "Dispositivo: $(adb shell getprop ro.product.model) Android $(adb shell getprop ro.build.version.release) API $(adb shell getprop ro.build.version.sdk)"
 log "WebView: $(adb shell dumpsys webviewupdate | grep -m1 -i 'current webview package' )"
 adb shell settings put secure location_mode 3 || true
+adb shell cmd alarm set-timezone Europe/Madrid 2>&1 | tee -a "$EV/e2e-log.txt" || true
+sleep 2
+log "Zona horaria del emulador: $(adb shell getprop persist.sys.timezone) | $(adb shell date)"
 adb logcat -c; adb logcat -v time > "$EV/logcat-completo.txt" 2>&1 &
 LOGPID=$!
 
@@ -82,6 +85,10 @@ chk(){ grep -qE "$1" "$EV/e2e-log.txt" || { V=FAIL; why="$why | falta: $2"; }; }
 chk 'marcador leido tras actualizar sobrevive' 'dato sobrevive a la actualizacion'
 chk 'compartir -> ventana.*ChooserActivity' 'selector de compartir'
 chk 'coincide titulo y hora de cada parada SI' 'paradas programadas coinciden con el plan'
+chk 'zona horaria del movil Europe/Madrid\?.*Europe/Madrid' 'zona horaria Europe/Madrid'
+chk 'dia normal\) SI' 'hora local Madrid, dia normal'
+chk 'cambio de hora 25/10\) SI' 'hora local Madrid, dia del cambio de hora'
+
 chk 'llego la cancelada\? \(0 = no\) 0' 'cancelacion efectiva'
 chk 'notificacion de parada real en segundo plano [1-9]' 'aviso de parada real en segundo plano'
 chk 'agenda tarjetas 41' 'agenda'
