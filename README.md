@@ -25,6 +25,21 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 
 `index.html` contiene la app, los datos y la ilustración. `sw.js` solo gestiona la notificación. Sin compilación ni claves.
 
+## App para Android (APK)
+
+La app de Android es esta misma web empaquetada dentro de un WebView: la interfaz se abre desde la propia app, sin depender de Chrome. Paquete `org.camarillaycanape.app`; las actualizaciones se firman con la misma clave, así que se instalan encima sin perder los datos guardados en la app (probado en emulador). No está en Play Store: hay que permitir "instalar apps desconocidas". Descarga: [Releases, android-latest](https://github.com/camarillaYcanape/camarilla-y-canape/releases/tag/android-latest).
+
+Qué añade el envoltorio: ubicación con el permiso del sistema, compartir con el selector de Android (el enlace apunta a la web publicada), guardar el .ics y ofrecerlo a las apps de calendario, y avisos del móvil 15 minutos antes de cada parada.
+
+Límites reales:
+- El mapa, los tiempos a pie y los enlaces externos necesitan conexión. La interfaz, la agenda (una copia fechada) y el plan guardado abren sin conexión. No se descargan mapas por adelantado: la política de OpenStreetMap no lo permite.
+- Los avisos los programa Android sin permiso de alarma exacta. Pueden retrasarse si el sistema ahorra batería, se pierden si reinicias el móvil, usan la hora local del móvil y necesitan el permiso de notificaciones. Se quitan con el mismo botón. No hay garantía de que suenen.
+- Calendario: la app abre el .ics con una app de calendario y confirmas tú la importación. No se ha comprobado qué calendario lo importa bien.
+- Pruebas hechas en un emulador de Android 13 y en un móvil real al instalar; no hay pruebas en más dispositivos.
+- La agenda no se actualiza desde la app (ver la propuesta pendiente más abajo).
+
+Cómo se construye: `.github/workflows/android.yml` compila, firma y prueba en un emulador. La release estable `android-latest` solo se sustituye si el mensaje del commit incluye `[publicar]` y las pruebas pasan; si no, la build queda como prerelease de prueba.
+
 ## Propuesta pendiente: actualizar la agenda (no implementada)
 
 Estado: **solo propuesta**. No existe ningún botón de actualizar ni automatización, y no se ha obtenido permiso de las fuentes. La agenda sigue siendo una copia fechada.
