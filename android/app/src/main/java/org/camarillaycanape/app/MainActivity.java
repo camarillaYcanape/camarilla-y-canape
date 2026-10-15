@@ -2,6 +2,12 @@ package org.camarillaycanape.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.SharedPreferences;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -33,6 +39,8 @@ public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String START = "https://" + HOST + "/assets/index.html";
     private static final int REQ_LOC = 7;
+    private static final int REQ_NOTIF = 8;
+    private static final String PAGES = "https://camarillaycanape.github.io/camarilla-y-canape/";
 
     private WebView web;
     private String pendingOrigin;
@@ -137,6 +145,23 @@ public class MainActivity extends Activity {
         if (web.canGoBack()) web.goBack(); else super.onBackPressed();
     }
 
+    private PendingIntent pending(int code, String t, String b) {
+        Intent i = new Intent(this, ReminderReceiver.class);
+        i.setData(Uri.parse("reminder://" + code));
+        i.putExtra("n", code).putExtra("t", t).putExtra("b", b);
+        return PendingIntent.getBroadcast(this, code, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private void cancelAll() {
+        SharedPreferences p = getPreferences(MODE_PRIVATE);
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        for (String x : p.getString("alarms", "").split(",")) {
+            if (x.isEmpty()) continue;
+            am.cancel(pending(Integer.parseInt(x), "", ""));
+        }
+        p.edit().remove("alarms").apply();
+    }
+
     /** Puente mínimo: solo guardar y abrir el .ics que genera la propia app. */
     private class Bridge {
         @JavascriptInterface
@@ -164,7 +189,9 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void share(final String text) {
+        public void share(final String raw) {
+            // El enlace de la app empaquetada apunta a su origen local: se cambia por la web publica.
+            final String text = raw.replace(START, PAGES);
             runOnUiThread(new Runnable() {
                 public void run() {
                     Intent i = new Intent(Intent.ACTION_SEND);
@@ -174,6 +201,48 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        /** granted | ask | denied */
+        @JavascriptInterface
+        public String reminderPermission() {
+            if (android.os.Build.VERSION.SDK_INT < 33) return "granted";
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
+            return shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) || !getPreferences(MODE_PRIVATE).getBoolean("asked", false) ? "ask" : "denied";
+        }
+
+        @JavascriptInterface
+        public void askReminderPermission() {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    getPreferences(MODE_PRIVATE).edit().putBoolean("asked", true).apply();
+                    if (android.os.Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
+                }
+            });
+        }
+
+        /** [{id,t,b,at}] con at en milisegundos; avisos inexactos de Android (sin permiso especial). */
+        @JavascriptInterface
+        public void scheduleReminders(String json) {
+            try {
+                cancelAll();
+                AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                JSONArray a = new JSONArray(json);
+                SharedPreferences.Editor ed = getPreferences(MODE_PRIVATE).edit();
+                StringBuilder ids = new StringBuilder();
+                for (int k = 0; k < a.length(); k++) {
+                    JSONObject o = a.getJSONObject(k);
+                    int code = 1000 + k;
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, o.getLong("at"), pending(code, o.getString("t"), o.getString("b")));
+                    ids.append(code).append(',');
+                }
+                ed.putString("alarms", ids.toString()).apply();
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "No se pudieron programar los avisos.", Toast.LENGTH_LONG).show();
+            }
+        }
+
+        @JavascriptInterface
+        public void cancelReminders() { cancelAll(); }
 
         @JavascriptInterface
         public void fail(final String why) {
