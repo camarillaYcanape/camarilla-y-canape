@@ -70,6 +70,12 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageFinished(WebView v, String url) {
+                // WebView no trae Web Share: se enlaza con el selector nativo de Android.
+                v.evaluateJavascript("navigator.share=function(d){AndroidApp.share((d&&(d.url||d.text))||'');return Promise.resolve();};", null);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri u = r.getUrl();
                 if (HOST.equals(u.getHost())) return false;
@@ -138,8 +144,7 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() {
                 public void run() {
                     try {
-                        String name = rawName.replaceAll("[^A-Za-z0-9._-]", "_");
-                        if (!name.endsWith(".ics")) name = name + ".ics";
+                        String name = "paseo-galerias.ics";
                         File dir = new File(getCacheDir(), "ics");
                         dir.mkdirs();
                         File f = new File(dir, name);
@@ -154,6 +159,18 @@ public class MainActivity extends Activity {
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "No se pudo abrir el archivo del calendario.", Toast.LENGTH_LONG).show();
                     }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void share(final String text) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Intent i = new Intent(Intent.ACTION_SEND);
+                    i.setType("text/plain");
+                    i.putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(Intent.createChooser(i, "Compartir paseo"));
                 }
             });
         }
