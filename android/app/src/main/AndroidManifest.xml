@@ -6,6 +6,7 @@
         <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="camarillaYcanape"
         android:supportsRtl="true"
