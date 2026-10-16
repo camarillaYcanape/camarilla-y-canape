@@ -43,6 +43,8 @@ public class MainActivity extends Activity {
     private static final String PAGES = "https://camarillaycanape.github.io/camarilla-y-canape/";
 
     private WebView web;
+    private volatile String agendaBase = AgendaStore.DEFAULT_BASE;
+    private volatile boolean agendaBusy = false;
     private String pendingOrigin;
     private GeolocationPermissions.Callback pendingCb;
 
@@ -250,6 +252,56 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void cancelReminders() { cancelAll(); }
+
+        // ---- Agenda de ArtBarcelona: registro local sustituible (ver AgendaStore) ----
+
+        /** Registro valido guardado en el movil (JSON) o cadena vacia: la web usa entonces la copia incluida. */
+        @JavascriptInterface
+        public String agendaLoad() { return new AgendaStore(getFilesDir(), agendaBase).load(); }
+
+        /** {hasData, fetchedAt, fetchedMs, count, allowed, nextAllowedMs, lastError?, busy} */
+        @JavascriptInterface
+        public String agendaStatus() {
+            try { return new AgendaStore(getFilesDir(), agendaBase).status(System.currentTimeMillis()).put("busy", agendaBusy).toString(); }
+            catch (Exception e) { return "{}"; }
+        }
+
+        /** Solo al pulsar el boton. Responde started | busy | limit y avisa a la web con window.onAgenda({...}). */
+        @JavascriptInterface
+        public String agendaRefresh() {
+            final AgendaStore st = new AgendaStore(getFilesDir(), agendaBase);
+            if (agendaBusy) return "busy";
+            if (!st.status(System.currentTimeMillis()).optBoolean("allowed", true)) return "limit";
+            agendaBusy = true;
+            new Thread(new Runnable() {
+                public void run() {
+                    AgendaStore.Result r;
+                    try { r = st.refresh(System.currentTimeMillis()); }
+                    catch (Throwable t) { r = new AgendaStore.Result(false, "error", "Error inesperado."); }
+                    agendaBusy = false;
+                    final String js;
+                    try {
+                        js = "window.onAgenda&&window.onAgenda(" + new JSONObject().put("ok", r.ok).put("code", r.code).put("msg", r.msg).toString() + ")";
+                    } catch (Exception e) { return; }
+                    runOnUiThread(new Runnable() { public void run() { web.evaluateJavascript(js, null); } });
+                }
+            }, "agenda-refresh").start();
+            return "started";
+        }
+
+        /** Solo pruebas: borra el estado del limite para poder repetir intentos. La release lo ignora. */
+        @JavascriptInterface
+        public void agendaDebugReset() {
+            if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) return;
+            new AgendaStore(getFilesDir(), agendaBase).debugClearMeta();
+        }
+
+        /** Solo pruebas: la APK de release ignora esta llamada y solo consulta graf.cat. */
+        @JavascriptInterface
+        public void agendaDebugSource(String url) {
+            if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) return;
+            agendaBase = (url == null || url.isEmpty()) ? AgendaStore.DEFAULT_BASE : url;
+        }
 
         @JavascriptInterface
         public void fail(final String why) {
