@@ -27,6 +27,90 @@ const send = (method, params = {}) => new Promise(r => { const i = ++id; pend[i]
 const ev = async e => { const r = await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true }); return r.result.result?.value ?? JSON.stringify(r.result); };
 await send('Runtime.enable'); await send('Network.enable');
 
+if (MODE === 'agenda') {
+  const J = x => JSON.stringify(x);
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  log('agenda[1] inicio: registro local vacio', await ev(`AndroidApp.agendaLoad()===''`));
+  log('agenda[1] inicio: fecha mostrada = copia incluida 15/10/2026', await ev(`abWhen()==='15/10/2026'`));
+  log('agenda[1] inicio: tarjetas', await cards(), 'esperadas', await expected());
+  log('agenda[1] inicio: caja de actualizar presente', await ev(`!!document.querySelector('#agrefresh')`));
+  shot('13-agenda-antes');
+  // 2) fallo a mitad (una ficha da 500): no se sustituye nada
+  await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/parcial/')`);
+  await ev(`document.querySelector('#agrefresh').click()`);
+  log('agenda[2] fallo parcial: aviso recibido', await waitFor(`/No se actualiz/.test(document.querySelector('#agst')?.innerText||'')`));
+  log('agenda[2] fallo parcial: mensaje', await ev(`document.querySelector('#agst').innerText`));
+  log('agenda[2] fallo parcial: registro sigue vacio y fecha 15/10/2026', await ev(`AndroidApp.agendaLoad()===''&&abWhen()==='15/10/2026'`));
+  log('agenda[2] fallo parcial: tarjetas sin cambio (agenda tarjetas igual)', (await cards()) === (await expected()));
+  log('agenda[2] fallo parcial: reintento bloqueado 30 min', await ev(`AndroidApp.agendaRefresh()`));
+  shot('14-agenda-fallo');
+  // 3) descarga correcta: sustituye y recarga
+  await ev(`AndroidApp.agendaDebugReset()`); await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/ok/')`);
+  await ev(`location.reload()`); await sleep(3000);
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  await ev(`document.querySelector('#agrefresh').click()`);
+  await sleep(2500);
+  log('agenda[3] descarga ok: aviso', await waitFor(`/Actualizado/.test(document.querySelector('#agst')?.innerText||'')`, 90000));
+  await sleep(1500);
+  const rec = JSON.parse(await ev(`AndroidApp.agendaLoad()`));
+  log('agenda[3] descarga ok: registro v/n/hash', rec.v, rec.n, rec.sha256.slice(0, 12), 'fetchedAt', rec.fetchedAt);
+  log('agenda[3] descarga ok: titulos "vieja" y sin entidades HTML', await ev(`AndroidApp.agendaLoad().includes('vieja')&&!/&amp;|&#8211;|<em>/.test(AndroidApp.agendaLoad())`));
+  log('agenda[3] descarga ok: fecha mostrada es la de hoy', await ev(`AB_META!==null&&abWhen().slice(0,5)===new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}).slice(0,5)`));
+  log('agenda[3] descarga ok: tarjetas = esperadas', await cards(), 'esperadas', await expected(), (await cards()) === (await expected()) ? 'SI' : 'NO');
+  log('agenda[3] descarga ok: aparece "Prueba" de la fuente', await ev(`/Prueba 0/.test(document.body.innerText)`));
+  log('agenda[3] descarga ok: boton desactivado por limite diario', await ev(`document.querySelector('#agrefresh').disabled`));
+  log('agenda[3] descarga ok: segundo intento', await ev(`AndroidApp.agendaRefresh()`));
+  log('agenda[3] descarga ok: sin errores de script', 'ver lineas EXC');
+  shot('15-agenda-actualizada');
+  // 4) fallo posterior (pocas entradas): se conserva la copia buena con su fecha
+  const good = await ev(`AndroidApp.agendaLoad()`);
+  await ev(`AndroidApp.agendaDebugReset()`); await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/pocos/')`);
+  await ev(`location.reload()`); await sleep(3000); await ev(`location.hash='#/expos'`); await sleep(1500);
+  await ev(`document.querySelector('#agrefresh').click()`);
+  log('agenda[4] validacion rechaza copia pobre: aviso', await waitFor(`/No se actualiz/.test(document.querySelector('#agst')?.innerText||'')`));
+  log('agenda[4] mensaje', await ev(`document.querySelector('#agst').innerText`));
+  log('agenda[4] registro anterior intacto (identico)', (await ev(`AndroidApp.agendaLoad()`)) === good ? 'SI' : 'NO');
+  // 5) sustitucion por datos nuevos
+  await ev(`AndroidApp.agendaDebugReset()`); await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/ok2/')`);
+  await ev(`location.reload()`); await sleep(3000); await ev(`location.hash='#/expos'`); await sleep(1500);
+  await ev(`document.querySelector('#agrefresh').click()`);
+  await sleep(2500);
+  log('agenda[5] sustitucion: aviso', await waitFor(`/Actualizado/.test(document.querySelector('#agst')?.innerText||'')`, 90000));
+  await sleep(1500);
+  const now = await ev(`AndroidApp.agendaLoad()`);
+  log('agenda[5] sustitucion: ahora son los datos "nueva" y ya no "vieja"', now.includes('nueva') && !now.includes('vieja') ? 'SI' : 'NO');
+  log('agenda[5] sustitucion: tarjetas = esperadas', await cards(), 'esperadas', await expected(), (await cards()) === (await expected()) ? 'SI' : 'NO');
+  // sin datos personales ni ubicacion: lo comprueba el servidor falso en su registro (cookies/autorizacion) y el CI
+  process.exit(0);
+}
+if (MODE === 'agendaoffline') {
+  log('agenda sin red: persiste tras cerrar la app y usa datos guardados', await ev(`AndroidApp.agendaLoad().includes('nueva')`));
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  log('agenda sin red: tarjetas', await cards(), 'esperadas', await expected(), (await cards()) === (await expected()) ? 'SI' : 'NO');
+  log('agenda sin red: fecha de los datos visible', await ev(`document.querySelector('.note strong')?.innerText`));
+  log('agenda sin red: intento de actualizar offline', await ev(`(AndroidApp.agendaDebugSource('https://graf.cat/'),AndroidApp.agendaDebugReset(),AndroidApp.agendaRefresh())`));
+  log('agenda sin red: fallo claro', await waitFor(`/No se actualiz/.test(document.querySelector('#agst')?.innerText||'')`, 90000));
+  log('agenda sin red: mensaje', await ev(`document.querySelector('#agst')?.innerText`));
+  log('agenda sin red: datos intactos tras el fallo', await ev(`AndroidApp.agendaLoad().includes('nueva')`));
+  shot('16-agenda-sin-red');
+  process.exit(0);
+}
+if (MODE === 'agendafallback') {
+  log('agenda danada[1] actual corrupto: se usa la copia previa valida (vieja)', await ev(`AndroidApp.agendaLoad().includes('vieja')&&!AndroidApp.agendaLoad().includes('nueva')`));
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  log('agenda danada[1] tarjetas', await cards(), 'esperadas', await expected(), (await cards()) === (await expected()) ? 'SI' : 'NO');
+  process.exit(0);
+}
+if (MODE === 'agendafallback2') {
+  log('agenda danada[2] ambos corruptos: registro vacio, la web usa la copia incluida', await ev(`AndroidApp.agendaLoad()===''&&abWhen()==='15/10/2026'`));
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  log('agenda danada[2] tarjetas', await cards(), 'esperadas', await expected(), (await cards()) === (await expected()) ? 'SI' : 'NO');
+  log('agenda danada[2] la app sigue usable (ruta)', await ev(`!!document.querySelector('nav')`));
+  process.exit(0);
+}
+const cards = () => ev(`document.querySelectorAll('article').length`);
+const expected = () => ev(`EXPO.filter(x=>expoState(x,today())!=='fin'&&kind(x)).length`);
+const waitFor = async (expr, ms = 60000) => { for (let t = 0; t < ms; t += 1000) { try { if (await ev(expr) === true) return true; } catch {} await sleep(1000); } return false; };
 if (MODE === 'set') { await ev(`localStorage.setItem('cyc_test_marker','sobrevive-'+${JSON.stringify(process.env.MARK || 'x')})`); log('marcador escrito', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'get') { log('marcador leido tras actualizar', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'offline') {
@@ -34,7 +118,7 @@ if (MODE === 'offline') {
   log('sin red: origen', await ev('location.origin'));
   log('sin red: logo', await ev(`!!document.querySelector('.logo') && document.querySelector('.logo').naturalWidth`));
   await ev(`location.hash='#/expos'`); await sleep(1500);
-  log('sin red: agenda tarjetas', await ev(`document.querySelectorAll('article').length`));
+  { const n = await cards(), m = await expected(); log('sin red: agenda tarjetas', n, 'esperadas', m, n === m ? 'SI' : 'NO'); }
   shot('11-sin-red-agenda');
   await ev(`location.hash='#/ruta'`); await sleep(2000);
   log('sin red: ruta pantalla', (await ev(`document.body.innerText.slice(0,300).replace(/\\n+/g,' | ')`)));
