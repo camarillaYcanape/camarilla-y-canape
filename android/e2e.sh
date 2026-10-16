@@ -10,8 +10,9 @@ node_e2e(){ MODE=$1 EVIDENCE=$EV MARK=${2:-} node android/e2e.mjs 2>&1 | tee -a 
 # El emulador (imagen google_apis) a veces mata la app porque muere un proceso de Google Play services del que depende el WebView
 # (logcat: "Killing ... depends on provider com.google.android.gms/.fonts.provider.FontsProvider in dying proc"). Se registra y se reintenta una vez.
 razon_muerte(){ adb logcat -d | grep -E "Killing [0-9]+:$PKG" | tail -2 | tee -a "$EV/e2e-log.txt"; }
-start_app(){ adb shell am force-stop $PKG; adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9
-  PID=$(adb shell pidof $PKG | tr -d '\r'); log "pid=$PID"; adb forward tcp:9222 localabstract:webview_devtools_remote_$PID; }
+start_app(){ for try in 1 2 3; do adb shell am force-stop $PKG; adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9
+  PID=$(adb shell pidof $PKG | tr -d '\r'); log "pid=$PID"; [ -n "$PID" ] && break; log "la app no arranco (intento $try); causa en logcat:"; razon_muerte; done
+  adb forward tcp:9222 localabstract:webview_devtools_remote_$PID; }
 adb wait-for-device; adb shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 2; done'
 adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
 log "Dispositivo: $(adb shell getprop ro.product.model) Android $(adb shell getprop ro.build.version.release) API $(adb shell getprop ro.build.version.sdk)"
@@ -46,7 +47,7 @@ adb emu geo fix 2.1649 41.3917 || true
 start_app
 adb exec-out screencap -p > "$EV/01-inicio.png"
 node_e2e main
-if grep -q 'CONEXION DE DEPURACION CERRADA' /tmp/last_e2e.txt && ! grep -q 'boton Permitir' /tmp/last_e2e.txt; then
+if grep -qE 'CONEXION DE DEPURACION CERRADA|fetch failed' /tmp/last_e2e.txt && ! grep -q 'boton Permitir' /tmp/last_e2e.txt; then
   log "REINTENTO: la app murio antes del dialogo de permiso. Causa registrada en logcat:"; razon_muerte
   start_app; node_e2e main
 fi
@@ -54,7 +55,7 @@ sleep 3
 PID=$(adb shell pidof $PKG | tr -d '\r'); if [ -z "$PID" ]; then log "la app se cerro tras conceder el permiso: la reabro"; adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9; PID=$(adb shell pidof $PKG | tr -d '\r'); fi
 adb forward tcp:9222 localabstract:webview_devtools_remote_$PID
 node_e2e rest
-if grep -q 'CONEXION DE DEPURACION CERRADA' /tmp/last_e2e.txt; then
+if grep -qE 'CONEXION DE DEPURACION CERRADA|fetch failed' /tmp/last_e2e.txt; then
   log "REINTENTO de la fase 2: la app murio durante ella. Causa registrada en logcat:"; razon_muerte
   start_app; node_e2e rest
 fi
@@ -86,11 +87,13 @@ adb shell am force-stop $PKG; start_app; node_e2e agendaoffline
 adb shell cmd connectivity airplane-mode disable; adb shell svc wifi enable; adb shell svc data enable; sleep 4
 log "== Agenda: archivo actual corrupto (simula escritura interrumpida): debe usarse la copia previa"
 adb shell am force-stop $PKG
-adb shell run-as $PKG sh -c 'printf "{\"v\":1,\"items\":[" > files/agenda/agenda-actual.json; printf "x" > files/agenda/agenda-nueva.tmp'
+adb shell "run-as $PKG sh -c 'printf truncado > files/agenda/agenda-actual.json; printf x > files/agenda/agenda-nueva.tmp'"
+adb shell run-as $PKG ls -la files/agenda 2>&1 | tee -a "$EV/e2e-log.txt"
 start_app; node_e2e agendafallback
 log "== Agenda: ambos archivos corruptos: vuelve a la copia incluida sin romper la app"
 adb shell am force-stop $PKG
-adb shell run-as $PKG sh -c 'printf "basura" > files/agenda/agenda-previa.json'
+adb shell "run-as $PKG sh -c 'printf basura > files/agenda/agenda-previa.json'"
+adb shell run-as $PKG ls -la files/agenda 2>&1 | tee -a "$EV/e2e-log.txt"
 start_app; node_e2e agendafallback2
 
 adb shell input keyevent KEYCODE_BACK; sleep 1
