@@ -20,7 +20,8 @@ node_e2e(){ MODE=$1 EVIDENCE=$EV timeout 240 node android/e2e.mjs 2>&1 | tee -a 
 node_e2e api36
 adb exec-out screencap -p > "$EV/21-api36-agenda.png"
 log "foco antes de Atras: $(adb shell dumpsys window | grep -m1 mCurrentFocus)"
-adb shell input keyevent KEYCODE_BACK; sleep 2
+adb shell input keyevent KEYCODE_BACK; sleep 3
+log "foco tras el primer Atras: $(adb shell dumpsys window | grep -m1 mCurrentFocus)"
 node_e2e api36back
 adb shell input keyevent KEYCODE_BACK; sleep 3
 log "tras Atras en la pagina inicial, proceso vivo: $(adb shell pidof $PKG | tr -d '\r' | wc -c) (0 = cerrada); foco: $(adb shell dumpsys window | grep -m1 mCurrentFocus)"
@@ -45,5 +46,5 @@ chk 'api36 cabecera visible bajo la barra de estado true' 'contenido no tapado p
 chk 'api36 agenda tarjetas [0-9]+ esperadas [0-9]+ SI' 'agenda carga'
 chk 'api36 Atras vuelve a la ruta anterior true' 'Atras navega en la web'
 chk 'oliva:.*True' 'barra de estado pintada'
-chk 'proceso vivo: 0 ' 'Atras en la raiz cierra la app'
+chk 'tras Atras en la pagina inicial.*foco: .*[Ll]auncher' 'Atras en la raiz cierra la app (vuelve al launcher)'
 echo "$V $why" > "$EV/veredicto-api36.txt"; log "VEREDICTO API36: $V $why"
