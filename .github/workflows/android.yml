@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v3
-        with: { gradle-version: '8.2.1' }
+        with: { gradle-version: '8.11.1' }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: Preparar activos (misma web que Pages) e iconos
@@ -36,7 +36,7 @@ jobs:
       - name: Compilar
         run: |
           cd android
-          gradle --no-daemon assembleDebug assembleRelease -PappVersionCode=${{ github.run_number }}
+          gradle --no-daemon assembleDebug assembleRelease bundleRelease -PappVersionCode=${{ github.run_number }}
       - name: Firmar release
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -53,6 +53,13 @@ jobs:
           "$BT/apksigner" verify --print-certs out/camarillaYcanape.apk | head -3 | tee out/firma.txt
           "$BT/aapt2" dump badging out/camarillaYcanape.apk | grep -E "package:|sdkVersion|uses-permission|application-label:" | tee out/apk-info.txt
           cp android/app/build/outputs/apk/debug/app-debug.apk out/app-debug.apk
+          # Paquete AAB para Google Play (firmado con la misma clave; Play lo usaria como clave de subida)
+          ALIAS=$(keytool -list -keystore "$RUNNER_TEMP/cyc.jks" -storepass:env KS_PASS 2>/dev/null | grep -m1 PrivateKeyEntry | cut -d, -f1)
+          cp android/app/build/outputs/bundle/release/app-release.aab out/camarillaYcanape.aab
+          jarsigner -keystore "$RUNNER_TEMP/cyc.jks" -storepass:env KS_PASS -sigalg SHA256withRSA -digestalg SHA-256 out/camarillaYcanape.aab "$ALIAS" >/dev/null
+          jarsigner -verify out/camarillaYcanape.aab | head -1 | tee out/aab-firma.txt
+          sha256sum out/camarillaYcanape.aab | tee -a out/aab-firma.txt
+          "$BT/aapt2" dump badging out/camarillaYcanape.apk | grep -E "targetSdkVersion|compileSdkVersion|versionCode" | tee -a out/apk-info.txt
           rm -f "$RUNNER_TEMP/cyc.jks"
       - name: Prueba de la web en navegador (sin puente Android)
         run: |
@@ -75,14 +82,24 @@ jobs:
           disable-animations: true
           script: bash android/e2e.sh out/app-debug.apk out/camarillaYcanape.apk out/app-debug-prev.apk out/release-prev.apk
         continue-on-error: true
+      - name: Prueba en emulador Android 16 (API 36, nivel de destino)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash android/e2e36.sh out/app-debug.apk
+        continue-on-error: true
       - name: Publicar APK y evidencias
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p evidence
-          cp out/camarillaYcanape.apk out/firma.txt out/apk-info.txt evidence/ 2>/dev/null || true
+          cp out/camarillaYcanape.apk out/camarillaYcanape.aab out/aab-firma.txt out/firma.txt out/apk-info.txt evidence/ 2>/dev/null || true
           V=$(cut -d' ' -f1 evidence/veredicto.txt 2>/dev/null || echo FAIL)
           grep -q 'WEB OK' evidence/web-navegador.txt 2>/dev/null || V=FAIL
+          grep -q '^PASS' evidence/veredicto-api36.txt 2>/dev/null || V=FAIL
           # La release estable solo se sustituye si el mensaje del commit lo pide con [publicar]
           case "${{ github.event.head_commit.message }}" in *"[publicar]"*) ;; *) [ "$V" = "PASS" ] && V=PASS-SIN-PUBLICAR ;; esac
           if [ "$V" = "PASS" ]; then
