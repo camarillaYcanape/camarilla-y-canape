@@ -64,3 +64,7 @@ Propuesta de una copia común diaria (idea anterior, **no implementada**): una s
 Pruebas (en CI, emulador Android 13 con un servidor falso que imita la API; no se consulta graf.cat real en las pruebas de CI): validación y rechazo de datos malos, descarga parcial, copia pobre, sustitución completa, límite diario, persistencia tras cerrar la app y sin conexión, archivo corrupto con copia previa, ambos corruptos, regresión de la web en Chrome y de las demás funciones. Estas pruebas no sustituyen una prueba con la fuente real: la lectura real de graf.cat se comprobó aparte (60 entradas en una descarga de prueba).
 
 Esta función no añade cuentas, pagos, datos personales ni monitores recurrentes.
+
+## Preparación para Google Play
+
+No está publicada en Google Play ni hay cuenta de desarrollador. Se ha adaptado el código a los requisitos técnicos vigentes (API 36, formato AAB, política de privacidad en [privacidad.html](privacidad.html)). Detalle, fuentes y pendientes del titular en [docs/google-play.md](docs/google-play.md). Este documento no es una aprobación de Google ni asesoramiento legal.
