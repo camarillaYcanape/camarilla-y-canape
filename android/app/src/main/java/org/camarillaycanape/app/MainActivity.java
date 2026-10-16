@@ -14,7 +14,14 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
+import android.widget.FrameLayout;
 import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
@@ -51,8 +58,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        getWindow().setStatusBarColor(Color.parseColor("#26351D"));
-        getWindow().setNavigationBarColor(Color.parseColor("#F7F4E6"));
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
@@ -123,7 +128,41 @@ public class MainActivity extends Activity {
             }
         });
 
-        setContentView(web);
+        // Con target 35+ Android dibuja la app de borde a borde: se deja sitio a las barras del sistema.
+        final FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.parseColor("#F7F4E6"));
+        final View bar = new View(this);
+        bar.setBackgroundColor(Color.parseColor("#26351D"));
+        root.addView(web);
+        root.addView(bar, new FrameLayout.LayoutParams(-1, 0, Gravity.TOP));
+        root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets in) {
+                int top, bottom, left, right;
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    android.graphics.Insets i = in.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    top = i.top; bottom = i.bottom; left = i.left; right = i.right;
+                } else {
+                    top = in.getSystemWindowInsetTop(); bottom = in.getSystemWindowInsetBottom();
+                    left = in.getSystemWindowInsetLeft(); right = in.getSystemWindowInsetRight();
+                }
+                web.setPadding(left, top, right, bottom);
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) bar.getLayoutParams();
+                lp.height = top; bar.setLayoutParams(lp);
+                return WindowInsets.CONSUMED;
+            }
+        });
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            getWindow().getInsetsController().setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS, WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, new OnBackInvokedCallback() {
+                @Override
+                public void onBackInvoked() { if (web.canGoBack()) web.goBack(); else finish(); }
+            });
+        }
+        setContentView(root);
+        root.requestApplyInsets();
         if (b == null) web.loadUrl(START); else web.restoreState(b);
     }
 
@@ -143,7 +182,9 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        // Android 12 y anterior; en 13+ lo atiende OnBackInvokedCallback.
         if (web.canGoBack()) web.goBack(); else super.onBackPressed();
     }
 
