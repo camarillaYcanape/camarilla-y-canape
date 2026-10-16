@@ -34,3 +34,4 @@ http.createServer((req, res) => {
   if (o) { if (mode === 'parcial' && +o[1] === 1003) { res.writeHead(500); return res.end('boom'); } return j(occ(mode, +o[1])); }
   res.writeHead(404); res.end('no');
 }).listen(port, '0.0.0.0', () => console.log('fake_graf en', port));
+// (sin cambios de comportamiento)
