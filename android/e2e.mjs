@@ -26,6 +26,9 @@ ws.onmessage = m => {
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pend[i] = r; ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async e => { const r = await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true }); return r.result.result?.value ?? JSON.stringify(r.result); };
 await send('Runtime.enable'); await send('Network.enable');
+const cards = () => ev(`document.querySelectorAll('article').length`);
+const expected = () => ev(`EXPO.filter(x=>expoState(x,today())!=='fin').length`);
+const waitFor = async (expr, ms = 60000) => { for (let t = 0; t < ms; t += 1000) { try { if (await ev(expr) === true) return true; } catch {} await sleep(1000); } return false; };
 
 if (MODE === 'agenda') {
   const J = x => JSON.stringify(x);
@@ -108,9 +111,6 @@ if (MODE === 'agendafallback2') {
   log('agenda danada[2] la app sigue usable (ruta)', await ev(`!!document.querySelector('nav')`));
   process.exit(0);
 }
-const cards = () => ev(`document.querySelectorAll('article').length`);
-const expected = () => ev(`EXPO.filter(x=>expoState(x,today())!=='fin'&&kind(x)).length`);
-const waitFor = async (expr, ms = 60000) => { for (let t = 0; t < ms; t += 1000) { try { if (await ev(expr) === true) return true; } catch {} await sleep(1000); } return false; };
 if (MODE === 'set') { await ev(`localStorage.setItem('cyc_test_marker','sobrevive-'+${JSON.stringify(process.env.MARK || 'x')})`); log('marcador escrito', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'get') { log('marcador leido tras actualizar', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'offline') {
