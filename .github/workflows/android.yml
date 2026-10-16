@@ -83,6 +83,7 @@ jobs:
           script: bash android/e2e.sh out/app-debug.apk out/camarillaYcanape.apk out/app-debug-prev.apk out/release-prev.apk
         continue-on-error: true
       - name: Prueba en emulador Android 16 (API 36, nivel de destino)
+        timeout-minutes: 14
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
