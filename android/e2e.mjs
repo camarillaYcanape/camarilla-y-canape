@@ -117,10 +117,11 @@ if (MODE === 'api36') {
   log('api36 cabecera visible bajo la barra de estado', await ev(`!!document.querySelector('header')&&document.querySelector('header').getBoundingClientRect().top>=0`));
   await ev(`location.hash='#/expos'`); await sleep(1500);
   { const n = await cards(), m = await expected(); log('api36 agenda tarjetas', n, 'esperadas', m, n === m ? 'SI' : 'NO'); }
-  log('api36 hash', await ev('location.hash'));
+  log('api36 hash', await ev('location.hash'), 'historial', await ev('history.length'));
   process.exit(0);
 }
 if (MODE === 'api36back') {
+  log('api36 hash tras Atras', await ev('location.hash'), 'historial', await ev('history.length'));
   log('api36 Atras vuelve a la ruta anterior', await ev(`location.hash!=='#/expos'`));
   process.exit(0);
 }
