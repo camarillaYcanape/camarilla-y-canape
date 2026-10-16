@@ -16,7 +16,7 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 ## Límites
 
 - Datos de OpenStreetMap (copia del 15/10/2026, ODbL): pueden estar incompletos o desfasados. Confirma el horario antes de ir.
-- Agenda: copia manual (15/10/2026) de ArtBarcelona/GRAF (https://www.artbarcelona.es/es/agenda/, con inauguraciones, exposiciones, visitas y charlas con fecha y hora) y del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/). No se actualiza sola ni se consulta en directo. Se distingue inauguración de exposición; sin hora o fecha en la fuente, no se inventa.
+- Agenda: copia manual (15/10/2026) de ArtBarcelona/GRAF (https://www.artbarcelona.es/es/agenda/, con inauguraciones, exposiciones, visitas y charlas con fecha y hora) y del programa de Galeries d’Art de Catalunya (https://www.galeriesdecatalunya.org/es/programa/). No se actualiza sola ni se consulta en directo; en la app de Android, la de ArtBarcelona se puede actualizar a mano (máximo una vez al día en ese móvil, ver más abajo). Se distingue inauguración de exposición; sin hora o fecha en la fuente, no se inventa.
 - Sin servidor propio: no hay avisos con la app cerrada (salvo vía calendario), ni sincronización, ni reservas.
 - OSRM es un servidor demo de uso moderado y sin garantías.
 - El mapa de fondo son teselas de OpenStreetMap (tile.openstreetmap.org, https://operations.osmfoundation.org/policies/tiles/): uso ligero, con atribución, sin garantías. Con "Cerca de mí" solo se piden tras aceptar la casilla.
@@ -32,26 +32,35 @@ La app de Android es esta misma web empaquetada dentro de un WebView: la interfa
 Qué añade el envoltorio: ubicación con el permiso del sistema, compartir con el selector de Android (el enlace apunta a la web publicada), guardar el .ics y ofrecerlo a las apps de calendario, y avisos del móvil 15 minutos antes de cada parada.
 
 Límites reales:
-- El mapa, los tiempos a pie y los enlaces externos necesitan conexión. La interfaz, la agenda (una copia fechada) y el plan guardado abren sin conexión. No se descargan mapas por adelantado: la política de OpenStreetMap no lo permite.
+- El mapa, los tiempos a pie y los enlaces externos necesitan conexión. La interfaz, la agenda (una copia fechada, guardada en el móvil) y el plan guardado abren sin conexión. No se descargan mapas por adelantado: la política de OpenStreetMap no lo permite.
 - Los avisos los programa Android sin permiso de alarma exacta. Pueden retrasarse si el sistema ahorra batería, se pierden si reinicias el móvil, usan la hora local del móvil y necesitan el permiso de notificaciones. Se quitan con el mismo botón. No hay garantía de que suenen.
 - Calendario: la app abre el .ics con una app de calendario y confirmas tú la importación. No se ha comprobado qué calendario lo importa bien.
 - Pruebas hechas en un emulador de Android 13 y en un móvil real al instalar; no hay pruebas en más dispositivos.
-- La agenda no se actualiza desde la app (ver la propuesta pendiente más abajo).
+- La agenda de ArtBarcelona se puede actualizar a mano desde la app (ver "Agenda actualizable en Android" más abajo). La de Galeries d'Art de Catalunya sigue siendo una copia manual.
 
 Cómo se construye: `.github/workflows/android.yml` compila, firma y prueba en un emulador. La release estable `android-latest` solo se sustituye si el mensaje del commit incluye `[publicar]` y las pruebas pasan; si no, la build queda como prerelease de prueba.
 
-## Propuesta pendiente: actualizar la agenda (no implementada)
+## Agenda actualizable en Android
 
-Estado: **solo propuesta**. No existe ningún botón de actualizar ni automatización, y no se ha obtenido permiso de las fuentes. La agenda sigue siendo una copia fechada.
+Estado: **implementado en la app de Android** (prerelease de prueba hasta pasar todas las pruebas; ver abajo). En el navegador la agenda sigue siendo la copia fechada incluida en la web.
 
-Lo acordado como punto de partida:
+Cómo funciona:
 
-- **Copia común.** Una única copia de la agenda que consulten todas las personas que usen la app, en vez de que cada navegador pregunte a la fuente.
-- **Una renovación al día como máximo**, compartida entre todos los usuarios. Un límite guardado solo en cada navegador no vale: cien personas podrían provocar cien consultas.
-- **Botón desactivado** durante ese intervalo, con la fecha de la última actualización y cuándo volverá a estar disponible.
-- **Si la actualización falla**, se conserva la última copia válida y se muestra su fecha.
-- Que pase un día **no garantiza que haya novedades**.
-- **Condiciones de reutilización sin aclarar.** No se han podido confirmar las de GRAF (graf.cat), que alimenta la agenda de ArtBarcelona. Es una incertidumbre pendiente, no una prohibición probada. Hasta aclararlo, la agenda se mantiene como copia fechada con atribución y enlace a la fuente.
-- Galeries d'Art de Catalunya aplica un captcha a las consultas automáticas: solo se puede refrescar a mano desde un navegador.
+- **Registro local sustituible.** La app guarda en su almacenamiento privado un único registro de la agenda de ArtBarcelona (JSON con versión, fecha de descarga, número de entradas y huella SHA-256). Se consulta sin conexión. La copia incluida en la app (15/10/2026) es la base si no hay registro válido y posterior.
+- **Se sustituye solo tras una descarga completa y validada.** Se descargan la lista de eventos (todas las páginas, y se comprueba que el total coincide), los nombres de sala y las fechas de cada evento. Si cualquier petición falla, el formato no es el esperado, hay entradas con fechas, horas, enlaces o textos no válidos, todas las entradas ya han terminado o llegan muchas menos entradas vigentes que en la copia anterior, **no se sustituye nada** y se mantiene la copia anterior con su fecha.
+- **Sustitución segura.** Se escribe un temporal con fsync, se vuelve a validar, la copia actual pasa a "previa" y el temporal se renombra. Si el archivo actual se daña, se usa la previa; si ambos se dañan, la web vuelve a la copia incluida.
+- **La fecha de los datos siempre se ve** en la pestaña Agenda, junto con el botón "Actualizar desde ArtBarcelona". Pasar un día no garantiza que haya novedades.
+- **Límite por instalación, no global.** Como máximo una actualización correcta al día en cada móvil; tras un fallo se puede reintentar a los 30 minutos. Es un límite de esta app en este móvil: no hay límite común entre usuarios y no se simula con localStorage. La actualización solo ocurre cuando se pulsa el botón (sin tareas en segundo plano ni monitores).
+- **Qué se pide y qué se guarda.** Peticiones GET públicas a `https://graf.cat/wp-json/wp/v2/` (eventos, salas y fechas de cada evento; unas 50 peticiones, una a una, unos 30 s). Solo se guardan datos mínimos de cada entrada (tipo, sala, título, enlace a la ficha, fechas y horas) con atribución a ArtBarcelona/GRAF y enlace a la ficha original. No se envía ubicación ni datos personales; graf.cat ve la IP del móvil y el User-Agent de la app. Se ignoran descripciones, imágenes y datos de contacto. Los tipos que no sean exposición, inauguración, visita guiada o charla se descartan en vez de adivinarlos.
+- **Galeries d'Art de Catalunya** aplica un captcha a las consultas automáticas: sigue siendo copia manual fechada y no se intenta saltarlo.
 
-Esta propuesta no añade cuentas, pagos, datos personales ni monitores recurrentes.
+Lo que sigue sin estar confirmado (incertidumbre, no una prohibición probada):
+
+- **Condiciones de reutilización de GRAF (graf.cat).** Su web no publica unos términos de reutilización de los datos que hayamos podido encontrar (solo política de privacidad; contacto info@graf.cat) y su `robots.txt` solo bloquea `/wp-admin/`. La API REST de WordPress es pública y responde a CORS, pero eso no es una licencia. Por eso se piden pocos datos, solo al pulsar, a baja velocidad, con atribución y con enlace a la fuente. Si GRAF pide dejar de usarla, basta quitar la llamada.
+- **Datos del lado de la fuente.** No se sabe si la API cambiará de formato; en ese caso la validación rechaza la descarga y se conserva la copia anterior.
+
+Propuesta de una copia común diaria (idea anterior, **no implementada**): una sola copia compartida por todas las personas, con una renovación al día como máximo para todos. Requeriría un servicio o proceso que descargue y publique esa copia, y un límite en localStorage no puede hacerlo cumplir. Queda como opción futura si se quiere un límite común; la implementación actual limita cada instalación por separado.
+
+Pruebas (en CI, emulador Android 13 con un servidor falso que imita la API; no se consulta graf.cat real en las pruebas de CI): validación y rechazo de datos malos, descarga parcial, copia pobre, sustitución completa, límite diario, persistencia tras cerrar la app y sin conexión, archivo corrupto con copia previa, ambos corruptos, regresión de la web en Chrome y de las demás funciones. Estas pruebas no sustituyen una prueba con la fuente real: la lectura real de graf.cat se comprobó aparte (60 entradas en una descarga de prueba).
+
+Esta función no añade cuentas, pagos, datos personales ni monitores recurrentes.
