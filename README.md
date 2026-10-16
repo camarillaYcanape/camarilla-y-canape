@@ -29,6 +29,8 @@ Rutas a pie por galerías reales de Barcelona (Eixample, Poblenou y Born), con i
 
 La app de Android es esta misma web empaquetada dentro de un WebView: la interfaz se abre desde la propia app, sin depender de Chrome. Paquete `org.camarillaycanape.app`; las actualizaciones se firman con la misma clave, así que se instalan encima sin perder los datos guardados en la app (probado en emulador). No está en Play Store: hay que permitir "instalar apps desconocidas". Descarga: [Releases, android-latest](https://github.com/camarillaYcanape/camarilla-y-canape/releases/tag/android-latest).
 
+Versión de prueba 55: [APK](https://github.com/camarillaYcanape/camarilla-y-canape/releases/download/android-prueba-55/camarillaYcanape.apk) ([página de la release](https://github.com/camarillaYcanape/camarilla-y-canape/releases/tag/android-prueba-55)). Misma firma y paquete que la estable, se instala encima. Probada en emuladores de Android 13 y 16, todavía no en un móvil real. Sigue siendo una versión de prueba: la estable es la `android-latest`.
+
 Qué añade el envoltorio: ubicación con el permiso del sistema, compartir con el selector de Android (el enlace apunta a la web publicada), guardar el .ics y ofrecerlo a las apps de calendario, y avisos del móvil 15 minutos antes de cada parada.
 
 Límites reales:
