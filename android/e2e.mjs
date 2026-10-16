@@ -111,6 +111,19 @@ if (MODE === 'agendafallback2') {
   log('agenda danada[2] la app sigue usable (ruta)', await ev(`!!document.querySelector('nav')`));
   process.exit(0);
 }
+if (MODE === 'api36') {
+  await sleep(1500);
+  log('api36 cabecera visible bajo la barra de estado', await ev(`(()=>{const h=document.querySelector('header');return !!h&&h.getBoundingClientRect().top>=0&&h.getBoundingClientRect().height>0})()`));
+  log('api36 cabecera visible bajo la barra de estado', await ev(`!!document.querySelector('header')&&document.querySelector('header').getBoundingClientRect().top>=0`));
+  await ev(`location.hash='#/expos'`); await sleep(1500);
+  { const n = await cards(), m = await expected(); log('api36 agenda tarjetas', n, 'esperadas', m, n === m ? 'SI' : 'NO'); }
+  log('api36 hash', await ev('location.hash'));
+  process.exit(0);
+}
+if (MODE === 'api36back') {
+  log('api36 Atras vuelve a la ruta anterior', await ev(`location.hash!=='#/expos'`));
+  process.exit(0);
+}
 if (MODE === 'set') { await ev(`localStorage.setItem('cyc_test_marker','sobrevive-'+${JSON.stringify(process.env.MARK || 'x')})`); log('marcador escrito', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'get') { log('marcador leido tras actualizar', await ev(`localStorage.getItem('cyc_test_marker')`)); process.exit(0); }
 if (MODE === 'offline') {
