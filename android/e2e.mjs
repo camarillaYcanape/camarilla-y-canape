@@ -37,7 +37,7 @@ if (MODE === 'agenda') {
   log('agenda[1] inicio: fecha mostrada = copia incluida 15/10/2026', await ev(`abWhen()==='15/10/2026'`));
   log('agenda[1] inicio: tarjetas', await cards(), 'esperadas', await expected());
   log('agenda[1] inicio: caja de actualizar presente', await ev(`!!document.querySelector('#agrefresh')`));
-  shot('13-agenda-antes');
+  await ev(`(document.querySelector('#agrefresh')||document.querySelector('.note')).scrollIntoView({block:'start'})`); await sleep(600); shot('13-agenda-antes');
   // 2) fallo a mitad (una ficha da 500): no se sustituye nada
   await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/parcial/')`);
   await ev(`document.querySelector('#agrefresh').click()`);
@@ -46,7 +46,7 @@ if (MODE === 'agenda') {
   log('agenda[2] fallo parcial: registro sigue vacio y fecha 15/10/2026', await ev(`AndroidApp.agendaLoad()===''&&abWhen()==='15/10/2026'`));
   log('agenda[2] fallo parcial: tarjetas sin cambio (agenda tarjetas igual)', (await cards()) === (await expected()));
   log('agenda[2] fallo parcial: reintento bloqueado 30 min', await ev(`AndroidApp.agendaRefresh()`));
-  shot('14-agenda-fallo');
+  await ev(`(document.querySelector('#agrefresh')||document.querySelector('.note')).scrollIntoView({block:'start'})`); await sleep(600); shot('14-agenda-fallo');
   // 3) descarga correcta: sustituye y recarga
   await ev(`AndroidApp.agendaDebugReset()`); await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/ok/')`);
   await ev(`location.reload()`); await sleep(3000);
@@ -64,7 +64,7 @@ if (MODE === 'agenda') {
   log('agenda[3] descarga ok: boton desactivado por limite diario', await ev(`document.querySelector('#agrefresh').disabled`));
   log('agenda[3] descarga ok: segundo intento', await ev(`AndroidApp.agendaRefresh()`));
   log('agenda[3] descarga ok: sin errores de script', 'ver lineas EXC');
-  shot('15-agenda-actualizada');
+  await ev(`(document.querySelector('#agrefresh')||document.querySelector('.note')).scrollIntoView({block:'start'})`); await sleep(600); shot('15-agenda-actualizada'); await ev(`window.scrollBy(0,520)`); await sleep(500); shot('15b-agenda-tarjetas');
   // 4) fallo posterior (pocas entradas): se conserva la copia buena con su fecha
   const good = await ev(`AndroidApp.agendaLoad()`);
   await ev(`AndroidApp.agendaDebugReset()`); await ev(`AndroidApp.agendaDebugSource('http://127.0.0.1:8765/pocos/')`);
@@ -95,7 +95,7 @@ if (MODE === 'agendaoffline') {
   log('agenda sin red: fallo claro', await waitFor(`/No se actualiz/.test(document.querySelector('#agst')?.innerText||'')`, 90000));
   log('agenda sin red: mensaje', await ev(`document.querySelector('#agst')?.innerText`));
   log('agenda sin red: datos intactos tras el fallo', await ev(`AndroidApp.agendaLoad().includes('nueva')`));
-  shot('16-agenda-sin-red');
+  await ev(`(document.querySelector('#agrefresh')||document.querySelector('.note')).scrollIntoView({block:'start'})`); await sleep(600); shot('16-agenda-sin-red');
   process.exit(0);
 }
 if (MODE === 'agendafallback') {
