@@ -5,18 +5,18 @@ PKG=org.camarillaycanape.app
 EV=${EVIDENCE:-evidence}; mkdir -p "$EV"
 DBG=$1
 log(){ echo "[$(date +%H:%M:%S)] $*" | tee -a "$EV/e2e36-log.txt"; }
-adb wait-for-device; adb shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 2; done'
+timeout 120 adb wait-for-device; timeout 120 adb shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 2; done'
 adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
 log "Dispositivo: Android $(adb shell getprop ro.build.version.release) API $(adb shell getprop ro.build.version.sdk)"
 adb install -r "$DBG" | tee -a "$EV/e2e36-log.txt"
 log "targetSdk instalado: $(adb shell dumpsys package $PKG | grep -m1 targetSdk)"
 adb shell pm grant $PKG android.permission.ACCESS_FINE_LOCATION
-start_app(){ for try in 1 2 3; do adb shell am force-stop $PKG; adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9
+start_app(){ for try in 1 2 3; do adb shell am force-stop $PKG; timeout 60 adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 9
   PID=$(adb shell pidof $PKG | tr -d '\r'); log "pid=$PID"; [ -n "$PID" ] && break; log "la app no arranco (intento $try)"; adb logcat -d | grep -E "Killing [0-9]+:$PKG" | tail -2 | tee -a "$EV/e2e36-log.txt"; done
   adb forward tcp:9222 localabstract:webview_devtools_remote_$PID; }
 start_app
 adb exec-out screencap -p > "$EV/20-api36-inicio.png"
-node_e2e(){ MODE=$1 EVIDENCE=$EV node android/e2e.mjs 2>&1 | tee -a "$EV/e2e36-log.txt" > /tmp/last36.txt; }
+node_e2e(){ MODE=$1 EVIDENCE=$EV timeout 240 node android/e2e.mjs 2>&1 | tee -a "$EV/e2e36-log.txt" > /tmp/last36.txt; }
 node_e2e api36
 adb exec-out screencap -p > "$EV/21-api36-agenda.png"
 log "foco antes de Atras: $(adb shell dumpsys window | grep -m1 mCurrentFocus)"
